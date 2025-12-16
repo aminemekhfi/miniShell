@@ -6,233 +6,379 @@
  * @details Implémentation des fonctions d'analyse des lignes de commande.
  */
 
-#include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
-
+#include <ctype.h>
+#include <unistd.h>
 #include <fcntl.h>
 
 #include "parser.h"
 #include "processus.h"
 
-/** @brief Fonction de suppression des espaces inutiles au début et à la fin d'une chaîne de caractères.
- * @param str Chaîne de caractères à traiter.
- * @return int 0 en cas de succès, -1 en cas d'erreur.
- */
+/** @brief Fonction de suppression des espaces inutiles au début et à la fin. */
 int trim(char* str) {
+    if (!str) return -1;
+    size_t len = strlen(str);
+    if (len == 0) return 0;
 
+    // Suppression à la fin (y compris le \n de fgets)
+    char* end = str + len - 1;
+    while (end >= str && (isspace(*end) || *end == '\n')) {
+        end--;
+    }
+    *(end + 1) = '\0';
+
+    // Suppression au début
+    char* start = str;
+    while (*start && isspace(*start)) {
+        start++;
+    }
+
+    if (start != str) {
+        memmove(str, start, strlen(start) + 1);
+    }
+    return 0;
 }
 
-/** @brief Fonction de nettoyage d'une chaîne de caractères en supprimant les doublons d'espaces.
- * @param str Chaîne de caractères à nettoyer.
- * @return int 0 en cas de succès, -1 en cas d'erreur.
- */
+/** @brief Fonction de nettoyage (suppression doublons d'espaces). */
 int clean(char* str) {
+    if (!str) return -1;
+    char *dest = str;
+    char *src = str;
+    int space_found = 0;
 
+    while (*src) {
+        if (isspace(*src)) {
+            if (!space_found) {
+                *dest++ = ' ';
+                space_found = 1;
+            }
+        } else {
+            *dest++ = *src;
+            space_found = 0;
+        }
+        src++;
+    }
+    *dest = '\0';
+    return trim(str); // On re-trim pour nettoyer un éventuel espace final
 }
 
-/** @brief Fonction d'ajout de caractères d'espacement autour de tous les caractères de la chaîne *s* présents dans *str*.
- * @param str Chaîne de caractères à traiter.
- * @param s Chaîne de caractères contenant les séparateurs.
- * @param max Taille maximale de la chaîne *str*.
- * @return int 0 en cas de succès, -1 en cas d'erreur (dépassement de taille).
- * @details Cette fonction ajoute un espace avant et après chaque occurrence d'un caractère de *s* dans *str*.
- *    Si l'ajout d'espaces dépasse la taille maximale *max*, la fonction retourne -1.
- */
+/** @brief Ajout d'espaces autour des séparateurs. */
 int separate_s(char* str, char* s, size_t max) {
-
-}
-
-/** @brief Fonction de remplacement de toutes les occurrences de la sous-chaîne *s* par la sous-chaîne *t* dans la chaîne *str*.
- * @param str Chaîne de caractères à traiter.
- * @param s Sous-chaîne à remplacer.
- * @param t Sous-chaîne de remplacement.
- * @param max Taille maximale de la chaîne *str*.
- * @return int 0 en cas de succès, -1 en cas d'erreur (dépassement de taille).
- * @details Cette fonction remplace toutes les occurrences de la sous-chaîne *s* par la sous-chaîne *t* dans la chaîne *str*.
- *    Si le remplacement dépasse la taille maximale *max*, la fonction retourne -1.
- */
-int replace(char* str, const char* s, const char* t, size_t max) {
-
-}
-
-/** @brief Fonction de substitution des variables d'environnement dans une chaîne de caractères.
- * @param str Chaîne de caractères à traiter.
- * @param max Taille maximale de la chaîne *str*.
- * @return int 0 en cas de succès, -1 en cas d'erreur (dépassement de taille).
- * @details Cette fonction remplace toutes les occurrences de variables d'environnement au format $VAR ou ${VAR} par leur valeur dans la chaîne *str*.
- *    Si une variable n'existe pas, elle est remplacée par une chaîne vide.
- *    Si le remplacement dépasse la taille maximale *max*, la fonction retourne -1.
- */
-int substenv(char* str, size_t max) {
-
-}
-
-/** @brief Fonction de découpage d'une chaîne de caractères en tokens selon un séparateur.
- * @param str Chaîne de caractères à découper. Attention, cette chaîne est modifiée par la fonction.
- * @param sep Caractère séparateur.
- * @param tokens Tableau de chaînes de caractères pour stocker les tokens extraits. Le tableau est terminé par un pointeur NULL.
- * @param max Taille maximale du tableau *tokens*.
- * @return int Nombre de tokens extraits, -1 en cas d'erreur (dépassement de taille).
- * @details Cette fonction découpe la chaîne *str* en tokens en utilisant le caractère *sep* comme séparateur.
- *    Les tokens extraits sont stockés dans le tableau *tokens*.
- *    Si le nombre de tokens dépasse la taille maximale *max*, la fonction retourne -1.
- */
-int strcut(char* str, char sep, char** tokens, size_t max) {
-
-}
-
-/** @brief Fonction d'analyse d'une ligne de commande.
- * @param cmdl Pointeur vers la structure de ligne de commande à remplir.
- * @param line Chaîne de caractères contenant la ligne de commande à analyser.
- * @return int 0 en cas de succès, -1 en cas d'erreur (ligne trop longue, trop de commandes, etc.).
- * @details Cette fonction analyse la ligne de commande *line* et remplit la structure *cmdl* avec les informations extraites.
- *    La ligne de commande est copiée dans *cmdl->command_line* dans la limite de MAX_CMD_LINE caractères.
- *    La ligne est ensuite nettoyée (trim, clean, separate_s, replace, substenv), puis découpée en tokens.
- *    Les tokens sont ensuite utilisés pour remplir les structures processus_t et control_flow_t dans *cmdl*.
- *    Si la ligne dépasse la taille maximale ou si le nombre de commandes dépasse MAX_CMDS, la fonction retourne -1.
- *    Si une erreur est détectée, les descripteurs de fichiers ouverts sont fermés via close_fds(cmdl) avant de retourner -1.
-*/
-int parse_command_line(command_line_t* cmdl, const char* line) {
-    // Copie de la ligne de commande dans la structure
-    // -- // strncpy(cmdl->command_line, line, MAX_CMD_LINE - 1);
-    // -- // cmdl->command_line[MAX_CMD_LINE - 1] = '\0';
-    // Suppression des espaces inutiles au début et à la fin
-    if (trim(cmdl->command_line) != 0) {
-        return -1;
-    }
-    // Suppression des doublons d'espaces
-    if (clean(cmdl->command_line) != 0) {
-        return -1;
-    }
-    // Ajout d'espaces autour des caractères ;
-    if (separate_s(cmdl->command_line, ";", MAX_CMD_LINE) != 0) {
-        return -1;
-    }
-    // Traitement des variables d'environnement
-    if (substenv(cmdl->command_line, MAX_CMD_LINE) != 0) {
-        return -1;
-    }
-    // Découpage de la ligne en tokens
-    int num_tokens = strcut(cmdl->command_line, ' ', cmdl->tokens , MAX_CMD_LINE / 2 + 1);
-    if (num_tokens < 0) {
-        return -1;
-    }
-
-    // Index des tokens
-    int token_index = 0;
-    // Index des arguments dans le processus courant
-    int argv_index = 0;
-    // Premier processus de la ligne de commande
-    processus_t* current_proc = add_processus(cmdl, UNCONDITIONAL);
-
-    while (cmdl->tokens[token_index] != NULL) {
-        // TODO : vérifier que le nombre de processus ne dépasse pas MAX_CMDS
-        //        Que le nombre d'arguments ne dépasse pas MAX_ARGS 
-        //        ...
-        char* token = cmdl->tokens[token_index];
-        if (strcmp(token, ";") == 0) {
-            // Fin d'une commande.
-            // Si le ';' est le dernier token, on peut arrêter le parsing
-            if (cmdl->tokens[token_index + 1] == NULL) {
+    if (!str || !s) return -1;
+    
+    char buffer[MAX_CMD_LINE];
+    size_t i = 0, j = 0;
+    
+    while (str[i] != '\0' && j < max - 2) {
+        int is_sep = 0;
+        // Vérifie si le caractère courant est un séparateur
+        for (int k = 0; s[k] != '\0'; k++) {
+            if (str[i] == s[k]) {
+                is_sep = 1;
                 break;
             }
-            // Sinon, on passe au processus suivant
-            current_proc = add_processus(cmdl, UNCONDITIONAL);
-            // On réinitialise l'index des arguments
-            argv_index = 0;
-            // On passe au token suivant
-            token_index++;
-            continue;
         }
-        if (strcmp(token, "<") == 0) {
-            // Redirection de l'entrée standard
-            // Le token suivant doit être le fichier
-            token_index++;
-            if (cmdl->tokens[token_index] == NULL) {
-                fprintf(stderr, "Erreur de syntaxe: fichier attendu après '<'\n");
-                close_fds(cmdl);
-                return -1;
+
+        if (is_sep) {
+            buffer[j++] = ' ';
+            buffer[j++] = str[i];
+            buffer[j++] = ' ';
+        } else {
+            buffer[j++] = str[i];
+        }
+        i++;
+    }
+    buffer[j] = '\0';
+    
+    if (j >= max) return -1; // Dépassement de taille
+    
+    strcpy(str, buffer);
+    return clean(str); // On nettoie les espaces multiples créés
+}
+
+/** @brief Remplacement de sous-chaîne. */
+int replace(char* str, const char* s, const char* t, size_t max) {
+    char buffer[MAX_CMD_LINE];
+    char *p;
+    
+    if (!(p = strstr(str, s))) return 0; // Pas d'occurrence
+
+    // Copie préfixe
+    size_t prefix_len = p - str;
+    if (prefix_len >= max) return -1;
+    strncpy(buffer, str, prefix_len);
+    buffer[prefix_len] = '\0';
+
+    // Ajout remplacement + suffixe
+    snprintf(buffer + prefix_len, max - prefix_len, "%s%s", t, p + strlen(s));
+
+    if (strlen(buffer) >= max) return -1;
+    strcpy(str, buffer);
+    
+    // Appel récursif pour traiter les occurrences suivantes
+    return replace(str, s, t, max);
+}
+
+/** @brief Substitution des variables d'environnement ($VAR). */
+int substenv(char* str, size_t max) {
+    char buffer[MAX_CMD_LINE] = {0};
+    char varname[MAX_ENV];
+    size_t i = 0, j = 0;
+    
+    while (str[i] && j < max - 1) {
+        if (str[i] == '$') {
+            i++; // Passer le $
+            int v = 0;
+            // Format ${VAR} ou $VAR
+            if (str[i] == '{') {
+                i++;
+                while (str[i] && str[i] != '}') varname[v++] = str[i++];
+                if (str[i] == '}') i++;
+            } else {
+                while (str[i] && (isalnum(str[i]) || str[i] == '_')) varname[v++] = str[i++];
             }
-            // Ouvrir le fichier en lecture
+            varname[v] = '\0';
+            
+            char* val = getenv(varname);
+            if (val) {
+                size_t len = strlen(val);
+                if (j + len >= max) return -1;
+                strcpy(buffer + j, val);
+                j += len;
+            }
+            // Si la variable n'existe pas, on ne copie rien (remplacé par vide)
+        } else {
+            buffer[j++] = str[i++];
+        }
+    }
+    buffer[j] = '\0';
+    strcpy(str, buffer);
+    return 0;
+}
+
+/** @brief Découpage en tokens. */
+int strcut(char* str, char sep, char** tokens, size_t max) {
+    int count = 0;
+    char delim[2] = {sep, '\0'};
+    char* ptr = NULL;
+    
+    // strtok_r est thread-safe et plus robuste que strtok
+    char* token = strtok_r(str, delim, &ptr);
+    while (token != NULL && count < (int)max - 1) {
+        tokens[count++] = token;
+        token = strtok_r(NULL, delim, &ptr);
+    }
+    tokens[count] = NULL;
+    return count;
+}
+
+/** @brief Analyse de la ligne de commande. */
+int parse_command_line(command_line_t* cmdl, const char* line) {
+    // 1. Copie et nettoyage initial
+    strncpy(cmdl->command_line, line, MAX_CMD_LINE - 1);
+    cmdl->command_line[MAX_CMD_LINE - 1] = '\0';
+
+    if (trim(cmdl->command_line) != 0) return -1;
+    if (clean(cmdl->command_line) != 0) return -1;
+
+    // 2. Séparation des opérateurs et substitution
+    // On sépare ; | & < > !
+    if (separate_s(cmdl->command_line, ";|&<>!", MAX_CMD_LINE) != 0) return -1;
+    if (substenv(cmdl->command_line, MAX_CMD_LINE) != 0) return -1;
+    
+    // 3. Tokenisation
+    int num_tokens = strcut(cmdl->command_line, ' ', cmdl->tokens, MAX_CMD_LINE / 2 + 1);
+    if (num_tokens < 0) return -1;
+    if (num_tokens == 0) return 0; // Ligne vide
+
+    // 4. Analyse logique
+    int token_index = 0;
+    int argv_index = 0;
+    processus_t* current_proc = add_processus(cmdl, UNCONDITIONAL);
+    if (!current_proc) return -1;
+
+    while (cmdl->tokens[token_index] != NULL) {
+        char* token = cmdl->tokens[token_index];
+        char* next_token = cmdl->tokens[token_index + 1];
+        char* next_next_token = (next_token) ? cmdl->tokens[token_index + 2] : NULL;
+        
+        int is_operator = 0;
+
+        // --- Opérateurs de Contrôle de flux --- //
+
+        // Cas : ;
+        if (strcmp(token, ";") == 0) {
+            is_operator = 1;
+            // Si ce n'est pas la fin de la ligne, on prépare la suite
+            if (next_token) {
+                current_proc = add_processus(cmdl, UNCONDITIONAL);
+                argv_index = 0;
+            }
+        }
+        // Cas : | ou ||
+        else if (strcmp(token, "|") == 0) {
+            is_operator = 1;
+            if (next_token && strcmp(next_token, "|") == 0) {
+                // C'est un OR (||)
+                token_index++; // On consomme le 2ème |
+                if (cmdl->tokens[token_index + 1]) {
+                    current_proc = add_processus(cmdl, ON_FAILURE);
+                    argv_index = 0;
+                }
+            } else {
+                // C'est un PIPE (|)
+                int pfd[2];
+                if (pipe(pfd) == -1) {
+                    perror("pipe");
+                    close_fds(cmdl);
+                    return -1;
+                }
+                // Redirection sortie du courant -> entrée du tube
+                current_proc->stdout_fd = pfd[1];
+                add_fd(cmdl, pfd[1]);
+
+                // Création du processus suivant (connecté inconditionnellement)
+                current_proc = add_processus(cmdl, UNCONDITIONAL);
+                if (!current_proc) return -1;
+                argv_index = 0;
+
+                // Redirection entrée du suivant -> sortie du tube
+                current_proc->stdin_fd = pfd[0];
+                add_fd(cmdl, pfd[0]);
+            }
+        }
+        // Cas : & ou &&
+        else if (strcmp(token, "&") == 0) {
+            is_operator = 1;
+            if (next_token && strcmp(next_token, "&") == 0) {
+                // C'est un AND (&&)
+                token_index++; // On consomme le 2ème &
+                if (cmdl->tokens[token_index + 1]) {
+                    current_proc = add_processus(cmdl, ON_SUCCESS);
+                    argv_index = 0;
+                }
+            } else {
+                // C'est un Background (&)
+                current_proc->is_background = 1;
+                // Si une commande suit immédiatement sans séparateur (ex: ls & ls), c'est implicitement un ;
+                if (next_token && strcmp(next_token, ";") != 0 && strcmp(next_token, "|") != 0) {
+                     // On laisse la boucle traiter, le prochain token sera une nouvelle commande
+                     // Mais add_processus n'a pas été appelé. 
+                     // Pour simplifier, on assume que & termine la commande courante.
+                     if (cmdl->tokens[token_index + 1]) {
+                        current_proc = add_processus(cmdl, UNCONDITIONAL);
+                        argv_index = 0;
+                     }
+                }
+            }
+        }
+
+        // --- Redirections --- //
+        
+        // Entrée standard (< input)
+        else if (strcmp(token, "<") == 0) {
+            is_operator = 1;
+            token_index++; // On passe le <
+            if (!cmdl->tokens[token_index]) { fprintf(stderr, "Erreur syntaxe <\n"); return -1; }
+            
             int fd = open(cmdl->tokens[token_index], O_RDONLY);
             if (fd < 0) {
-                perror("open");
-                close_fds(cmdl);
+                perror("open input");
+                // On peut marquer une erreur de statut sans crasher tout le shell
+                current_proc->status = 1; 
+            } else {
+                current_proc->stdin_fd = fd;
+                add_fd(cmdl, fd);
+            }
+        }
+        // Sorties standards (> ou >>)
+        else if (strcmp(token, ">") == 0) {
+            is_operator = 1;
+            int flags = O_WRONLY | O_CREAT | O_TRUNC; // Mode >
+            
+            // Vérification >> (separate_s a séparé >> en > >)
+            if (next_token && strcmp(next_token, ">") == 0) {
+                flags = O_WRONLY | O_CREAT | O_APPEND; // Mode >>
+                token_index++; // On consomme le 2ème >
+            }
+            
+            token_index++; // On passe au nom du fichier
+            if (!cmdl->tokens[token_index]) { fprintf(stderr, "Erreur syntaxe >\n"); return -1; }
+
+            // Gestion simple de >&2 (si l'utilisateur a mis des espaces : > & 2)
+            // Pour ce projet, on se concentre sur les noms de fichiers
+            int fd = open(cmdl->tokens[token_index], flags, 0644);
+            if (fd < 0) {
+                perror("open output");
+            } else {
+                current_proc->stdout_fd = fd;
+                add_fd(cmdl, fd);
+            }
+        }
+        // Sortie erreur (2> ou 2>>)
+        // Note: separate_s a séparé "2>" en "2" ">". 
+        // On détecte donc: Token="2", Next=">"
+        else if (strcmp(token, "2") == 0 && next_token && strcmp(next_token, ">") == 0) {
+            is_operator = 1;
+            token_index++; // On est sur >
+            
+            int flags = O_WRONLY | O_CREAT | O_TRUNC;
+            // Check >>
+            if (cmdl->tokens[token_index + 1] && strcmp(cmdl->tokens[token_index + 1], ">") == 0) {
+                flags = O_WRONLY | O_CREAT | O_APPEND;
+                token_index++; // On est sur le 2ème >
+            }
+            
+            token_index++; // Fichier
+            if (!cmdl->tokens[token_index]) return -1;
+
+            // Gestion 2>&1
+            if (strcmp(cmdl->tokens[token_index], "&") == 0 && 
+                cmdl->tokens[token_index + 1] && 
+                strcmp(cmdl->tokens[token_index + 1], "1") == 0) {
+                    current_proc->stderr_fd = current_proc->stdout_fd;
+                    token_index++; // Passe &
+                    token_index++; // Passe 1 (sera incrémenté par la boucle)
+                    token_index--; // Ajustement car la boucle fait ++
+            } else {
+                int fd = open(cmdl->tokens[token_index], flags, 0644);
+                if (fd >= 0) {
+                    current_proc->stderr_fd = fd;
+                    add_fd(cmdl, fd);
+                } else {
+                    perror("open stderr");
+                }
+            }
+        }
+
+        // --- Modificateurs --- //
+        
+        // Inversion !
+        else if (strcmp(token, "!") == 0) {
+            // Uniquement si c'est au début de la commande
+            if (argv_index == 0) {
+                current_proc->invert = 1;
+                is_operator = 1;
+            }
+        }
+
+        // --- Arguments normaux --- //
+        
+        if (!is_operator) {
+            if (argv_index < MAX_ARGS - 1) {
+                if (argv_index == 0) current_proc->path = token;
+                current_proc->argv[argv_index++] = token;
+                current_proc->argv[argv_index] = NULL;
+            } else {
+                fprintf(stderr, "Erreur: trop d'arguments (max %d)\n", MAX_ARGS);
                 return -1;
             }
-            current_proc->stdin_fd = fd;
-            // Ajouter le descripteur à la liste des descripteurs ouverts
-            if (add_fd(cmdl, fd) != 0) {
-                close(fd);
-                close_fds(cmdl);
-                return -1;
-            }
-            // On passe au token suivant
-            token_index++;
-            continue;
-        }
-        // Traitement des autres opérateurs du shell (>, >>, 2>, |, &&, ||, ...)
-        if (strcmp(token, ">") == 0) {
-            // Ouvrir le fichier en écriture (O_WRONLY | O_CREAT | O_TRUNC)
-            // Ajouter le descripteur à la liste des descripteurs ouverts
-            // Affecter le descripteur au stdout_fd du processus courant
         }
 
-        if (strcmp(token, ">>") == 0) {
-            // Ouvrir le fichier en écriture (O_WRONLY | O_CREAT | O_APPEND)
-            // Ajouter le descripteur à la liste des descripteurs ouverts
-            // Affecter le descripteur au stdout_fd du processus courant
-        }
-
-        if (strcmp(token, "2>") == 0) {
-            // Reprendre le même traitement que pour ">", mais pour stderr_fd
-        }
-
-        if (strcmp(token, "2>>") == 0) {
-            // Reprendre le même traitement que pour ">>", mais pour stderr_fd
-        }
-
-        if (strcmp(token, "|") == 0) {
-            // Pour la gestion du pipe, vous pourrez utiliser next_processus(cmdl) pour initialiser les descripteurs
-            // des IOs standards de la structure processus_t courante et de la suivante.
-            // next_processus(cmdl) retourne un pointeur vers le processus qui sera renvoyé par add_processus(cmdl, mode)
-            // lors du prochain appel.
-        }
-
-        if (strcmp(token, "&&") == 0) {
-            // Même traitement que pour ";", mais avec le mode ON_SUCCESS
-        }
-
-        if (strcmp(token, "||") == 0) {
-            // Même traitement que pour ";", mais avec le mode ON_FAILURE
-        }
-
-        if (strcmp(token, "&") == 0) {
-           // Mettre le flag is_background du processus courant à 1
-        }
-
-        if (strcmp(token, "!") == 0) {
-            // Mettre le flag invert du processus courant à 1
-        }
-
-        // Le token n'est pas un opérateur, c'est une commande ou un argument
-        if (argv_index >= MAX_ARGS - 1) {
-            fprintf(stderr, "Erreur: trop d'arguments pour une commande (max %d)\n", MAX_ARGS - 1);
-            close_fds(cmdl);
-            return -1;
-        }
-        // argv_index == 0 => C'est la commande
-        if (argv_index == 0) {
-            current_proc->path = token;
-        }
-        current_proc->argv[argv_index++] = token;
-        // On passe au token suivant
         token_index++;
     }
-    // On a traité tous les tokens.
-    // À ce moment, la structure cmdl contient toutes les informations nécessaires
-    // pour exécuter la ligne de commande avec le controle de flux associé.
+
     return 0;
 }
