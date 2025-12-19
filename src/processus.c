@@ -17,6 +17,9 @@
 #include "processus.h"
 #include "builtins.h"
 
+int last_status = 0;
+
+
 /**
  * @brief Fonction d'initialisation d'une structure de processus.
  */
@@ -89,9 +92,21 @@ int launch_processus(processus_t* proc) {
         if (proc->stdout_fd != STDOUT_FILENO) {
             if (dup2(proc->stdout_fd, STDOUT_FILENO) == -1) { perror("dup2 stdout"); exit(1); }
         }
-        if (proc->stderr_fd != STDERR_FILENO) {
-            if (dup2(proc->stderr_fd, STDERR_FILENO) == -1) { perror("dup2 stderr"); exit(1); }
+        /* --- stderr --- */
+        if (proc->stderr_fd == -1) {
+            // Cas 2>&1 : stderr doit suivre stdout (déjà redirigé ou pipe)
+            if (dup2(STDOUT_FILENO, STDERR_FILENO) == -1) {
+                perror("dup2 stderr->stdout");
+                exit(1);
+            }
         }
+        else if (proc->stderr_fd != STDERR_FILENO) {
+            if (dup2(proc->stderr_fd, STDERR_FILENO) == -1) {
+                perror("dup2 stderr");
+                exit(1);
+            }
+        }
+
 
         // Fermeture de tous les descripteurs gérés par le shell (pipes, fichiers ouverts)
         // C'est CRUCIAL pour que les pipes fonctionnent (EOF détecté quand tous les écriveurs ferment)
@@ -267,26 +282,21 @@ int launch_command_line(command_line_t* cmdl) {
 
     while (current != NULL) {
         processus_t* proc = current->proc;
-        
-        // Lancer le processus courant
-        // launch_processus gère le fork/exec et l'attente (wait) si nécessaire
+
         if (launch_processus(proc) != 0) {
             fprintf(stderr, "Erreur au lancement du processus\n");
-            // En cas d'erreur système grave, on arrête tout ? 
-            // Pour le minishell, on continue souvent, mais ici break est plus sûr.
             break;
         }
 
-        // Déterminer la suite en fonction du statut et du graphe
+        last_status = proc->status;
+
         if (proc->status == 0) {
-            // SUCCES
             if (current->on_success_next != NULL) {
                 current = current->on_success_next;
             } else {
                 current = current->unconditionnal_next;
             }
         } else {
-            // ECHEC
             if (current->on_failure_next != NULL) {
                 current = current->on_failure_next;
             } else {
@@ -294,6 +304,7 @@ int launch_command_line(command_line_t* cmdl) {
             }
         }
     }
+
 
     // Nettoyage final : on s'assure que tous les descripteurs ouverts (pipes, redirections) sont fermés
     close_fds(cmdl);

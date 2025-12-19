@@ -16,6 +16,8 @@
 #include "parser.h"
 #include "processus.h"
 
+extern int last_status;
+
 /** @brief Fonction de suppression des espaces inutiles au début et à la fin. */
 int trim(char* str) {
     if (!str) return -1;
@@ -61,7 +63,7 @@ int clean(char* str) {
         src++;
     }
     *dest = '\0';
-    return trim(str); // On re-trim pour nettoyer un éventuel espace final
+    return trim(str); 
 }
 
 /** @brief Ajout d'espaces autour des séparateurs. */
@@ -95,7 +97,7 @@ int separate_s(char* str, char* s, size_t max) {
     if (j >= max) return -1; // Dépassement de taille
     
     strcpy(str, buffer);
-    return clean(str); // On nettoie les espaces multiples créés
+    return clean(str); //  nettoie les espaces multiples créés
 }
 
 /** @brief Remplacement de sous-chaîne. */
@@ -127,32 +129,52 @@ int substenv(char* str, size_t max) {
     char varname[MAX_ENV];
     size_t i = 0, j = 0;
     
-    while (str[i] && j < max - 1) {
-        if (str[i] == '$') {
-            i++; // Passer le $
-            int v = 0;
-            // Format ${VAR} ou $VAR
-            if (str[i] == '{') {
-                i++;
-                while (str[i] && str[i] != '}') varname[v++] = str[i++];
-                if (str[i] == '}') i++;
-            } else {
-                while (str[i] && (isalnum(str[i]) || str[i] == '_')) varname[v++] = str[i++];
-            }
-            varname[v] = '\0';
-            
-            char* val = getenv(varname);
-            if (val) {
-                size_t len = strlen(val);
-                if (j + len >= max) return -1;
-                strcpy(buffer + j, val);
-                j += len;
-            }
-            // Si la variable n'existe pas, on ne copie rien (remplacé par vide)
+while (str[i] && j < max - 1) {
+
+    /* ===== Gestion de $? ===== */
+    if (str[i] == '$' && str[i + 1] == '?') {
+        char status_str[16];
+        snprintf(status_str, sizeof(status_str), "%d", last_status);
+
+        size_t len = strlen(status_str);
+        if (j + len >= max) return -1;
+
+        strcpy(buffer + j, status_str);
+        j += len;
+        i += 2;
+    }
+
+    /* ===== Gestion $VAR ===== */
+    else if (str[i] == '$') {
+        i++; 
+        int v = 0;
+
+        if (str[i] == '{') {
+            i++;
+            while (str[i] && str[i] != '}')
+                varname[v++] = str[i++];
+            if (str[i] == '}') i++;
         } else {
-            buffer[j++] = str[i++];
+            while (str[i] && (isalnum(str[i]) || str[i] == '_'))
+                varname[v++] = str[i++];
+        }
+        varname[v] = '\0';
+
+        char *val = getenv(varname);
+        if (val) {
+            size_t len = strlen(val);
+            if (j + len >= max) return -1;
+            strcpy(buffer + j, val);
+            j += len;
         }
     }
+
+    /* ===== Caractère normal ===== */
+    else {
+        buffer[j++] = str[i++];
+    }
+}
+
     buffer[j] = '\0';
     strcpy(str, buffer);
     return 0;
@@ -191,7 +213,7 @@ int parse_command_line(command_line_t* cmdl, const char* line) {
     // 3. Tokenisation
     int num_tokens = strcut(cmdl->command_line, ' ', cmdl->tokens, MAX_CMD_LINE / 2 + 1);
     if (num_tokens < 0) return -1;
-    if (num_tokens == 0) return 0; // Ligne vide
+    if (num_tokens == 0) return 0; 
 
     // 4. Analyse logique
     int token_index = 0;
@@ -249,6 +271,16 @@ int parse_command_line(command_line_t* cmdl, const char* line) {
                 add_fd(cmdl, pfd[0]);
             }
         }
+        else if (strcmp(token, "~") == 0) 
+        {
+            char *home = getenv("HOME");
+            if (!home) {
+                fprintf(stderr, "HOME not set\n");
+                return -1;
+            }
+            current_proc->argv[argv_index++] = home;
+            current_proc->argv[argv_index] = NULL;
+        }
         // Cas : & ou &&
         else if (strcmp(token, "&") == 0) {
             is_operator = 1;
@@ -293,30 +325,53 @@ int parse_command_line(command_line_t* cmdl, const char* line) {
                 add_fd(cmdl, fd);
             }
         }
+
+        // Gestion >&2 (stdout vers stderr)
+        if (next_token && strcmp(next_token, "&") == 0 &&
+            next_next_token && strcmp(next_next_token, "2") == 0) {
+            
+            current_proc->stdout_fd = STDERR_FILENO;
+            
+            token_index += 2; // on consomme > & 2
+            is_operator = 1;
+        }
         // Sorties standards (> ou >>)
         else if (strcmp(token, ">") == 0) {
             is_operator = 1;
-            int flags = O_WRONLY | O_CREAT | O_TRUNC; // Mode >
-            
-            // Vérification >> (separate_s a séparé >> en > >)
-            if (next_token && strcmp(next_token, ">") == 0) {
-                flags = O_WRONLY | O_CREAT | O_APPEND; // Mode >>
-                token_index++; // On consomme le 2ème >
+        
+            // ===== Gestion >&2 (stdout -> stderr) =====
+            if (next_token && strcmp(next_token, "&") == 0 &&
+                next_next_token && strcmp(next_next_token, "2") == 0) {
+                
+                current_proc->stdout_fd = STDERR_FILENO;
+                
+                token_index += 2; // on consomme & et 2 (le > est déjà consommé)
             }
+            else {
+                int flags = O_WRONLY | O_CREAT | O_TRUNC; // Mode >
             
-            token_index++; // On passe au nom du fichier
-            if (!cmdl->tokens[token_index]) { fprintf(stderr, "Erreur syntaxe >\n"); return -1; }
-
-            // Gestion simple de >&2 (si l'utilisateur a mis des espaces : > & 2)
-            // Pour ce projet, on se concentre sur les noms de fichiers
-            int fd = open(cmdl->tokens[token_index], flags, 0644);
-            if (fd < 0) {
-                perror("open output");
-            } else {
-                current_proc->stdout_fd = fd;
-                add_fd(cmdl, fd);
+                // Vérification >> (separate_s a séparé >> en > >)
+                if (next_token && strcmp(next_token, ">") == 0) {
+                    flags = O_WRONLY | O_CREAT | O_APPEND; // Mode >>
+                    token_index++; // On consomme le 2ème >
+                }
+            
+                token_index++; // On passe au nom du fichier
+                if (!cmdl->tokens[token_index]) {
+                    fprintf(stderr, "Erreur syntaxe >\n");
+                    return -1;
+                }
+            
+                int fd = open(cmdl->tokens[token_index], flags, 0644);
+                if (fd < 0) {
+                    perror("open output");
+                } else {
+                    current_proc->stdout_fd = fd;
+                    add_fd(cmdl, fd);
+                }
             }
         }
+
         // Sortie erreur (2> ou 2>>)
         // Note: separate_s a séparé "2>" en "2" ">". 
         // On détecte donc: Token="2", Next=">"
@@ -338,7 +393,8 @@ int parse_command_line(command_line_t* cmdl, const char* line) {
             if (strcmp(cmdl->tokens[token_index], "&") == 0 && 
                 cmdl->tokens[token_index + 1] && 
                 strcmp(cmdl->tokens[token_index + 1], "1") == 0) {
-                    current_proc->stderr_fd = current_proc->stdout_fd;
+                    // current_proc->stderr_fd = current_proc->stdout_fd;
+                    current_proc->stderr_fd = -1;
                     token_index++; // Passe &
                     token_index++; // Passe 1 (sera incrémenté par la boucle)
                     token_index--; // Ajustement car la boucle fait ++
@@ -364,18 +420,20 @@ int parse_command_line(command_line_t* cmdl, const char* line) {
             }
         }
 
-        // --- Arguments normaux --- //
         
         if (!is_operator) {
             if (argv_index < MAX_ARGS - 1) {
-                if (argv_index == 0) current_proc->path = token;
-                current_proc->argv[argv_index++] = token;
+                if (argv_index == 0) {
+                    current_proc->path = token;
+                }
+                current_proc->argv[argv_index++] = token; 
                 current_proc->argv[argv_index] = NULL;
             } else {
                 fprintf(stderr, "Erreur: trop d'arguments (max %d)\n", MAX_ARGS);
                 return -1;
             }
         }
+
 
         token_index++;
     }

@@ -1,0 +1,67 @@
+========================================
+   TEST DES TUBES (PIPES) - MINISHELL   
+========================================
+
+>>> Pipe simple (ls | wc -l)
+$ 21
+$ ----------------------------------------
+>>> echo | wc
+$ 6
+$ ----------------------------------------
+>>> grep via pipe
+$ Makefile
+$ ----------------------------------------
+>>> Pipe multiple (ls | sort | wc -l)
+$ 21
+$ ----------------------------------------
+>>> Pipe + redirection >
+$ $ 6
+$ ----------------------------------------
+>>> Redirection < + pipe
+$ $ 5
+$ ----------------------------------------
+>>> stderr dans pipe (2>&1)
+$ wc: write error: Bad file descriptor
+----------------------------------------
+>>> stdout vers stderr puis pipe
+$ 6
+$ ----------------------------------------
+>>> builtin dans pipe (pwd | wc -c)
+$ 0
+/mnt/c/Users/Ahmed Amine/Desktop/miniShell
+$ ----------------------------------------
+>>> Pipe en début (erreur)
+$ &
+à faire.txt
+build
+count.txt
+doc
+error.txt
+err.txt
+f1.txt
+fait.txt
+file.txt
+include
+in.txt
+Makefile
+minishell
+out.txt
+RESULTATS_TEST_MINISHELL.txt
+RESULTATS_TEST_TUBES.txt
+src
+test_minishell.sh
+test_results.txt
+test_tubes_minishell.sh
+$ ----------------------------------------
+>>> Pipe en fin (erreur)
+$ $ ----------------------------------------
+>>> Pipe + &&
+$ 21
+OK
+$ ----------------------------------------
+>>> Pipe + ||
+$ ls: cannot access 'fichier_inexistant': No such file or directory
+0
+$ ----------------------------------------
+
+===== FIN DES TESTS TUBES =====

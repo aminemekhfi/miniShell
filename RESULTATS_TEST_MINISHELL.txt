@@ -1,0 +1,141 @@
+========================================
+  TEST COMPLET DU PROJET MINISHELL (PSI)
+========================================
+
+>>> Commande simple
+$ &
+à faire.txt
+build
+doc
+error.txt
+err.txt
+f1.txt
+fait.txt
+file.txt
+include
+Makefile
+minishell
+out.txt
+RESULTATS_TEST_MINISHELL.txt
+src
+test_minishell.sh
+test_results.txt
+$ ----------------------------------------
+>>> Commande avec arguments
+$ hello world
+$ ----------------------------------------
+>>> Commande inconnue
+$ commande_inconnue: commande introuvable
+$ ----------------------------------------
+>>> Foreground
+$ done
+$ ----------------------------------------
+>>> Background (&)
+$ [1] 1053
+$ bg_ok
+$ ----------------------------------------
+>>> ! true
+$ 0
+$ ----------------------------------------
+>>> ! false
+$ 0
+$ ----------------------------------------
+>>> Sequence ;
+$ A
+B
+C
+$ ----------------------------------------
+>>> && succès
+$ OK
+$ ----------------------------------------
+>>> && échec
+$ $ ----------------------------------------
+>>> || succès
+$ OK
+$ ----------------------------------------
+>>> || échec
+$ $ ----------------------------------------
+>>> Combinaison logique
+$ $ ----------------------------------------
+>>> Combinaison logique 2
+$ OK
+$ ----------------------------------------
+>>> Redirection stdin <
+$ $ input
+$ ----------------------------------------
+>>> Redirection stdout >
+$ $ hello
+$ ----------------------------------------
+>>> Redirection stdout >>
+$ $ hello
+world
+$ ----------------------------------------
+>>> Redirection stderr 2>
+$ $ ls: cannot access 'fichier_inexistant': No such file or directory
+$ ----------------------------------------
+>>> Redirection stderr 2>>
+$ $ ls: cannot access 'fichier_inexistant': No such file or directory
+ls: cannot access 'fichier_inexistant': No such file or directory
+$ ----------------------------------------
+>>> stdout vers stderr >&2
+$ hi
+$ ----------------------------------------
+>>> stderr vers stdout 2>&1
+$ ls: cannot access 'fichier_inexistant': No such file or directory
+----------------------------------------
+>>> Pipe simple
+$ 18
+$ ----------------------------------------
+>>> Pipe multiple
+$ 18
+$ ----------------------------------------
+>>> Pipe + grep
+$ hello
+$ ----------------------------------------
+>>> Pipe + redirection
+$ $ 6
+$ ----------------------------------------
+>>> 2>&1 + pipe
+$ wc: write error: Bad file descriptor
+----------------------------------------
+>>> >&2 + pipe
+$ 3
+$ ----------------------------------------
+>>> pwd builtin
+$ /mnt/c/Users/Ahmed Amine/Desktop/miniShell
+$ ----------------------------------------
+>>> cd /
+$ $ /
+$ ----------------------------------------
+>>> cd ~
+$ $ /home/amine
+$ ----------------------------------------
+>>> cd erreur
+$ cd: No such file or directory
+$ ----------------------------------------
+>>> export / unset
+$ $ 42
+$ $ 
+$ ----------------------------------------
+>>> Variable d'environnement
+$ /home/amine
+$ ----------------------------------------
+>>> Substitution 0
+$ $ 0
+$ $ 1
+$ ----------------------------------------
+>>> Erreur |
+$ $ ----------------------------------------
+>>> Erreur >
+$ Erreur syntaxe >
+Erreur lors de l'analyse de la ligne de commandes.
+$ ----------------------------------------
+>>> Erreur <
+$ Erreur syntaxe <
+Erreur lors de l'analyse de la ligne de commandes.
+$ ----------------------------------------
+>>> exit 42 (test du code de sortie)
+Code de sortie minishell (bash): 42
+----------------------------------------
+
+===== FIN DES TESTS =====

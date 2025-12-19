@@ -87,20 +87,19 @@ int builtin_cd(processus_t* cmd) {
 
 /** @brief Fonction d'exécution de la commande "exit".
  */
-int builtin_exit(processus_t* cmd) {
-    int exit_code = 0;
+int builtin_exit(processus_t *proc)
+{
+    int status = 0;
 
-    if (cmd->argv[1] != NULL) {
-        // Conversion de l'argument en entier
-        // Note: atoi ne détecte pas les erreurs, strtol serait mieux mais atoi suffit ici
-        exit_code = atoi(cmd->argv[1]);
+    // Si un argument est fourni : exit val
+    if (proc->argv[1] != NULL) {
+        status = atoi(proc->argv[1]);
     }
 
-    printf("exit\n"); // Comme le vrai shell
-    exit(exit_code);
-
-    return 0; // Jamais atteint
+    // Quitte le shell avec le code voulu
+    exit(status);
 }
+
 
 /** @brief Fonction d'exécution de la commande "export".
  */

@@ -24,6 +24,9 @@
 /// Taille maximale d'une ligne de commande
 #define MAX_CMD_LINE 4096
 
+extern int last_status;
+
+
 /** @brief Modes de contrôle de flux pour les processus.
  * @enum control_flow_mode_t
  * @details Cette énumération définit les différents modes de contrôle de flux pour l'exécution des processus.

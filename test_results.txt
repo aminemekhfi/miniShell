@@ -1,0 +1,140 @@
+==============================
+ TEST AUTOMATIQUE MINISHELL  
+==============================
+
+>>> pwd
+$ /mnt/c/Users/Ahmed Amine/Desktop/miniShell
+$ exit
+------------------------------
+>>> ls
+$ à faire.txt
+build
+doc
+error.txt
+err.txt
+f1.txt
+fait.txt
+file.txt
+include
+Makefile
+minishell
+out.txt
+src
+test_minishell.sh
+test_results.txt
+$ exit
+------------------------------
+>>> echo simple
+$ hello
+$ exit
+------------------------------
+>>> echo multiple args
+$ bonjour tout le monde
+$ exit
+------------------------------
+>>> echo $HOME
+$ /home/amine
+$ exit
+------------------------------
+>>> export / unset
+$ 
+
+$ exit
+------------------------------
+>>> cd /
+$ /
+$ exit
+------------------------------
+>>> cd ~
+$ /home/amine
+$ exit
+------------------------------
+>>> cd erreur
+$ cd: No such file or directory
+$ exit
+------------------------------
+>>> redirection >
+$ hello
+$ exit
+------------------------------
+>>> redirection >>
+$ hello
+world
+$ exit
+------------------------------
+>>> redirection <
+$ hello
+world
+$ exit
+------------------------------
+>>> stderr 2>
+$ ls: cannot access 'fichier_inexistant': No such file or directory
+$ exit
+------------------------------
+>>> pipe simple
+$ 15
+$ exit
+------------------------------
+>>> pipe grep
+$ hello
+$ exit
+------------------------------
+>>> pipe multiple
+$ 15
+$ exit
+------------------------------
+>>> true && echo OK
+$ OK
+$ exit
+------------------------------
+>>> false && echo FAIL
+$ $ exit
+------------------------------
+>>> false || echo OK
+$ OK
+$ exit
+------------------------------
+>>> true || echo FAIL
+$ $ exit
+------------------------------
+>>> background &
+$ done
+[1] 793
+$ exit
+------------------------------
+>>> status après succès
+$ 0
+$ exit
+------------------------------
+>>> status après erreur
+$ ls: cannot access 'fichier_inexistant': No such file or directory
+0
+$ exit
+------------------------------
+>>> status false
+$ 0
+$ exit
+------------------------------
+>>> status true
+$ 0
+$ exit
+------------------------------
+>>> syntax error |
+$ $ exit
+------------------------------
+>>> syntax error >
+$ Erreur syntaxe >
+Erreur lors de l'analyse de la ligne de commandes.
+$ exit
+------------------------------
+>>> syntax error <
+$ Erreur syntaxe <
+Erreur lors de l'analyse de la ligne de commandes.
+$ exit
+------------------------------
+>>> commande inconnue
+$ commande_inconnue: commande introuvable
+$ exit
+------------------------------
+
+=== FIN DES TESTS ===

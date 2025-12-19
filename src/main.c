@@ -36,6 +36,9 @@ void prompt() {
  * En cas d'erreur lors de l'exécution, un message est affiché sur stderr et la boucle continue.
  * Le shell se termine proprement en cas d'EOF (Ctrl+D) ou d'erreur fatale.
  */
+
+
+
 int main(int argc, char* argv[]) {
     (void) argc; // Pour éviter les warnings inutilisés
     (void) argv; // Pour éviter les warnings inutilisés

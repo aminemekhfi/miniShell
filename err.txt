@@ -1,0 +1,2 @@
+ls: cannot access 'fichier_inexistant': No such file or directory
+ls: cannot access 'fichier_inexistant': No such file or directory
